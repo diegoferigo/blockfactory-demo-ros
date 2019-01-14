@@ -1,0 +1,186 @@
+dist: xenial
+language: cpp
+services: docker
+
+os: linux
+
+cache:
+  directories:
+    - $HOME/.ccache
+    - $HOME/Library/Caches/Homebrew
+
+stages:
+  - test # Default stage with job matrix
+  - windows
+  - osx
+
+compiler:
+  - gcc
+  - clang
+
+env:
+  global:
+    - ROS_DISTRO="melodic"
+    - TRAVIS_CMAKE_GENERATOR="Ninja"
+  matrix:
+    - TRAVIS_BUILD_TYPE="Release" UBUNTU="bionic"
+    - TRAVIS_BUILD_TYPE="Debug" UBUNTU="bionic"
+
+# ===================
+# STAGE: test (linux)
+# ===================
+
+before_install:
+  # Build the docker image
+  - cd $TRAVIS_BUILD_DIR/.ci
+  - docker build --pull --build-arg from=ros:$ROS_DISTRO-ros-core-$UBUNTU --rm -t blockfactory/ci .
+  # Configure environment for finding dependencies
+  - export DEPS_INSTALL_PREFIX="$HOME/deps"
+  - export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:$DEPS_INSTALL_PREFIX"
+  # Execute the image in detached mode
+  - >-
+    docker run -d -it \
+      -v $TRAVIS_BUILD_DIR:$TRAVIS_BUILD_DIR \
+      -v $HOME/.ccache:$HOME/.ccache \
+      -w $TRAVIS_BUILD_DIR \
+      --env-file $TRAVIS_BUILD_DIR/.ci/env-file \
+      --name ci \
+      blockfactory/ci \
+      bash
+
+install:
+  # Install dependencies
+  - docker exec -it ci .ci/install.sh
+
+script:
+  - docker exec -it ci bash -c 'source /opt/ros/$ROS_DISTRO/setup.bash && .ci/script.sh'
+
+# ==========
+# STAGE: osx
+# ==========
+
+stage_osx:
+  before_install: &osx_before_install
+    # Setup ccache
+    - export PATH="/usr/local/opt/ccache/libexec:$PATH"
+  install: &osx_install
+    # Install ROS
+    # http://wiki.ros.org/kinetic/Installation/OSX/Homebrew/Source
+    #
+    # Kinetic does not work due to https://github.com/ros/rospack/pull/80, that
+    # is merged in lunar. Melodic does not work either, probably it is too new
+    # and few deps are not yet ready.
+    - mkdir -p ~/Library/Python/2.7/lib/python/site-packages
+    - echo "$(brew --prefix)/lib/python2.7/site-packages" >> ~/Library/Python/2.7/lib/python/site-packages/homebrew.pth
+    - sudo -H python2 -m pip install -U wstool rosdep rosinstall rosinstall_generator rospkg catkin-pkg sphinx
+    - sudo -H rosdep init
+    - rosdep update
+    - mkdir ~/ros_catkin_ws
+    - cd ~/ros_catkin_ws
+    - rosinstall_generator ros_comm --rosdistro $ROS_DISTRO --deps --wet-only --tar > $ROS_DISTRO-ros_comm-wet.rosinstall
+    - wstool init -j8 src $ROS_DISTRO-ros_comm-wet.rosinstall
+    - rosdep install --from-paths src --ignore-src --skip-keys google-mock --rosdistro $ROS_DISTRO -y
+    - ./src/catkin/bin/catkin_make_isolated --install -DCMAKE_BUILD_TYPE=Release
+    - source ~/ros_catkin_ws/install_isolated/setup.bash
+    # Configure environment for finding dependencies
+    - export DEPS_INSTALL_PREFIX="$HOME/deps"
+    - export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:$DEPS_INSTALL_PREFIX"
+    # Install dependencies
+    - cd $TRAVIS_BUILD_DIR/.ci
+    - ./install.sh
+  script: &osx_script
+    - cd $TRAVIS_BUILD_DIR/.ci
+    - ./script.sh
+
+# ==============
+# STAGE: windows
+# ==============
+
+stage_windows:
+  install: &windows_install
+    # Install ROS
+    # https://ms-iot.github.io/ROSOnWindows/GettingStarted/Setup.html
+    - choco source add -n=ros-win -s="https://roswin.azurewebsites.net/api/v2" --priority=1
+    # The output makes exceed the max log size, and the combination of redirecting plus
+    # travis_wait does not work
+    - sleep 500 && echo "Waiting ..." &
+    - sleep 1000 && echo "Waiting ..." &
+    - sleep 1500 && echo "Waiting ..." &
+    - sleep 2000 && echo "Waiting ..." &
+    - choco upgrade ros-melodic-desktop -y > logs.txt
+    - for pid in $(ps | grep sleep | tr -s " " | cut -d " " -f 1) ; do kill $pid ; done
+    # It is still not clear how to use env vars with multiple paths with separators in git-bash.
+    # In this case it is a CMake variable, and since it is CMake for Windows, providing a list
+    # with Windows-style folders separated by ";" works fine.
+    # TODO: understand if we can use the script /c/opt/ros/melodic/x64/setup.bat
+    - export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;C:\opt\ros\melodic\x64"
+    # Configure environment for finding dependencies
+    - export DEPS_INSTALL_PREFIX="$USERPROFILE\deps"
+    - export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH;${DEPS_INSTALL_PREFIX}"
+    # Install dependencies
+    - cd $TRAVIS_BUILD_DIR/.ci
+    - ./install.sh
+  script: &windows_script
+    - cd $TRAVIS_BUILD_DIR/.ci
+    - ./script.sh
+
+# ======================
+# BUILD JOBS FROM STAGES
+# ======================
+
+jobs:
+  include:
+    # ---------
+    # STAGE OSX
+    # ---------
+    - &osx_template
+      stage: osx
+      os: osx
+      osx_image: xcode10.1
+      compiler:
+      services:
+      before_install: *osx_before_install
+      install: *osx_install
+      before_script: skip
+      script: *osx_script
+      after_script: skip
+      after_failure: skip
+      after_success: skip
+      addons:
+        homebrew:
+          taps:
+            - ros/deps
+            - homebrew/core
+          packages:
+            - ccache
+      env:
+        ROS_DISTRO="lunar"
+        TRAVIS_CMAKE_GENERATOR="Xcode"
+        TRAVIS_BUILD_TYPE="Debug"
+    - <<: *osx_template
+      compiler: clang
+      env:
+        ROS_DISTRO="lunar"
+        TRAVIS_CMAKE_GENERATOR="Unix Makefiles"
+        TRAVIS_BUILD_TYPE="Debug"
+    # -------------
+    # STAGE WINDOWS
+    # -------------
+    - &windows_template
+      stage: windows
+      os: windows
+      services:
+      cache:
+      compiler:
+      before_install: skip
+      install: *windows_install
+      before_script: skip
+      script: *windows_script
+      after_script: skip
+      after_failure: skip
+      after_success: skip
+      env:
+        ROS_DISTRO="melodic"
+        TRAVIS_CMAKE_GENERATOR="Visual Studio 15 2017"
+        TRAVIS_CMAKE_ARCHITECTURE="x64"
+        TRAVIS_BUILD_TYPE="Release"
