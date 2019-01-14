@@ -1,0 +1,73 @@
+# Copyright (C) 2019 Istituto Italiano di Tecnologia (IIT). All rights reserved.
+# This software may be modified and distributed under the terms of the
+# GNU Lesser General Public License v2.1 or any later version.
+
+cmake_minimum_required(VERSION 3.5)
+project(ExampleRosToolbox LANGUAGES CXX VERSION 0.1)
+
+# C++ standard
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Build type
+if(NOT CMAKE_CONFIGURATION_TYPES)
+    if(NOT CMAKE_BUILD_TYPE)
+        set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build" FORCE)
+    endif()
+    set(ROS_BUILD_TYPES "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${ROS_BUILD_TYPES})
+endif()
+
+# Export all symbols in Windows
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
+# Utility for defining install folders
+include(GNUInstallDirs)
+
+# Tweak linker flags in Linux.
+# Matlab is very strict on missing symbols and by default ld do not warn if
+# something is missing.
+if(UNIX AND NOT APPLE AND NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+    get_filename_component(LINKER_BIN ${CMAKE_LINKER} NAME)
+    if(${LINKER_BIN} STREQUAL "ld")
+        set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--unresolved-symbols=report-all")
+    endif()
+endif()
+
+# ===========
+# C++ LIBRARY
+# ===========
+
+# Find the needed BlockFactory components:
+# - BlockFactoryCore contains the core classes such as Block and Signal
+# - BlockFactoryMex is required at runtime for loading the library from Simulink
+find_package(BlockFactory
+    REQUIRED COMPONENTS BlockFactoryCore
+    OPTIONAL_COMPONENTS BlockFactoryMex)
+
+# Find the C++ ROS libraries
+find_package(roscpp REQUIRED)
+
+# Create the plugin library. This must be a SHARED library.
+add_library(RosToolbox SHARED
+    include/common.h
+    include/RosTopicPublisher.h
+    include/RosTopicSubscriber.h
+    src/RosTopicPublisher.cpp
+    src/RosTopicSubscriber.cpp
+    src/Factory.cpp)
+
+# Manually set the name of the output library. This is not required and it
+# is done only for sake of clarity.
+set_target_properties(RosToolbox PROPERTIES
+    OUTPUT_NAME "RosToolbox")
+
+# Link the library with the Core component containing the core classes
+target_link_libraries(RosToolbox PRIVATE
+    BlockFactory::Core
+    ${roscpp_LIBRARIES})
+
+# Setup the include directories
+target_include_directories(RosToolbox PRIVATE
+    ${roscpp_INCLUDE_DIRS}
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
