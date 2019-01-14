@@ -1,0 +1,5 @@
+build*
+slprj
+CMakeLists.txt.*
+*.bak
+*.old
