@@ -3,3 +3,7 @@ slprj
 CMakeLists.txt.*
 *.bak
 *.old
+*.mat
+*.tmw
+*.mk
+*.dmr
