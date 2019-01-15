@@ -1,5 +1,8 @@
 # blockfactory-demo-ros
 
+[![Build Status (Linux/macOS) (master)](https://img.shields.io/travis/com/diegoferigo/blockfactory-demo-ros/master.svg?logo=travis&label=master)](https://travis-ci.com/diegoferigo/blockfactory-demo-ros)
+[![License](https://img.shields.io/badge/license-LGPL-19c2d8.svg)](https://github.com/robotology/blockfactory-demo-ros/blob/master/LICENSE)
+
 This repository contains a [`robotology/blockfactory`](https://github.com/robotology/blockfactory) plugin that provides a proof-of-concept implementation of ROS functionalities.
 
 The plugin provides two classes:
