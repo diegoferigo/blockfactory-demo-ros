@@ -10,9 +10,13 @@ cache:
     - $HOME/Library/Caches/Homebrew
 
 stages:
-  - test # Default stage with job matrix
+  #- test # Default stage with job matrix
   - windows
-  - osx
+  #- osx
+  - name: test
+    if: true is false
+  - name: osx
+    if: true is false
 
 compiler:
   - gcc
@@ -100,15 +104,15 @@ stage_windows:
   install: &windows_install
     # Install ROS
     # https://ms-iot.github.io/ROSOnWindows/GettingStarted/Setup.html
-    - choco source add -n=ros-win -s="https://roswin.azurewebsites.net/api/v2" --priority=1
+    #- choco source add -n=ros-win -s="https://roswin.azurewebsites.net/api/v2" --priority=1
     # The output makes exceed the max log size, and the combination of redirecting plus
     # travis_wait does not work
-    - sleep 500 && echo "Waiting ..." &
-    - sleep 1000 && echo "Waiting ..." &
-    - sleep 1500 && echo "Waiting ..." &
-    - sleep 2000 && echo "Waiting ..." &
-    - choco upgrade ros-melodic-desktop -y > logs.txt
-    - for pid in $(ps | grep sleep | tr -s " " | cut -d " " -f 1) ; do kill $pid ; done
+    #- sleep 500 && echo "Waiting ..." &
+    #- sleep 1000 && echo "Waiting ..." &
+    #- sleep 1500 && echo "Waiting ..." &
+    #- sleep 2000 && echo "Waiting ..." &
+    #- choco upgrade ros-melodic-desktop -y > logs.txt
+    #- for pid in $(ps | grep sleep | tr -s " " | cut -d " " -f 1) ; do kill $pid ; done
     # It is still not clear how to use env vars with multiple paths with separators in git-bash.
     # In this case it is a CMake variable, and since it is CMake for Windows, providing a list
     # with Windows-style folders separated by ";" works fine.
@@ -183,4 +187,11 @@ jobs:
         ROS_DISTRO="melodic"
         TRAVIS_CMAKE_GENERATOR="Visual Studio 15 2017"
         TRAVIS_CMAKE_ARCHITECTURE="x64"
+        TRAVIS_BUILD_TYPE="Release"
+    - <<: *windows_template
+      before_install: choco install ninja
+      compiler: clang
+      env:
+        ROS_DISTRO="melodic"
+        TRAVIS_CMAKE_GENERATOR="Ninja"
         TRAVIS_BUILD_TYPE="Release"
