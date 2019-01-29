@@ -119,15 +119,15 @@ bool RosTopicSubscriber::configureSizeAndPorts(blockfactory::core::BlockInformat
     }
 
     // Configure the output port
-    blockfactory::core::BlockInformation::PortData output{
-        /*portIndex=*/0, std::vector<int>{msgSize}, blockfactory::core::DataType::DOUBLE};
+    blockfactory::core::Port::Info output{
+        /*portIndex=*/0, std::vector<int>{msgSize}, blockfactory::core::Port::DataType::DOUBLE};
 
     // Populate a data structure with the input / output data
-    blockfactory::core::BlockInformation::IOData ioData;
-    ioData.output.push_back(output);
+    blockfactory::core::OutputPortsInfo outputPortsInfo;
+    outputPortsInfo.push_back(output);
 
     // Store port data into the BlockInformation
-    if (!blockInfo->setIOPortsData(ioData)) {
+    if (!blockInfo->setPortsInfo({}, outputPortsInfo)) {
         bfError << "Failed to configure input / output ports";
         return false;
     }
