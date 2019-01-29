@@ -48,24 +48,27 @@ find_package(BlockFactory
 # Find the C++ ROS libraries
 find_package(roscpp REQUIRED)
 
-# Create the plugin library. This must be a SHARED library.
-add_library(RosToolbox SHARED
-    include/common.h
-    include/RosTopicPublisher.h
-    include/RosTopicSubscriber.h
-    src/RosTopicPublisher.cpp
-    src/RosTopicSubscriber.cpp
-    src/Factory.cpp)
+# Include CMake helpers provided by BlockFactory
+include(BlockFactoryPlugin)
 
-# Manually set the name of the output library. This is not required and it
-# is done only for sake of clarity.
-set_target_properties(RosToolbox PROPERTIES
-    OUTPUT_NAME "RosToolbox")
+register_blockfactory_block(
+    BLOCK_NAME RosTopicPublisher
+    PLUGIN_NAME RosToolbox
+    SOURCES src/RosTopicPublisher.cpp
+    HEADERS include/RosTopicPublisher.h)
 
-# Link the library with the Core component containing the core classes
-target_link_libraries(RosToolbox PRIVATE
-    BlockFactory::Core
-    ${roscpp_LIBRARIES})
+register_blockfactory_block(
+    BLOCK_NAME RosTopicSubscriber
+    PLUGIN_NAME RosToolbox
+    SOURCES src/RosTopicSubscriber.cpp
+    HEADERS include/RosTopicSubscriber.h)
+
+# Create the plugin library
+add_blockfactory_plugin(RosToolbox
+    EXTRA_SOURCES src/Factory.cpp)
+
+# Link the library with the external dependencies
+target_link_libraries(RosToolbox PRIVATE ${roscpp_LIBRARIES})
 
 # Setup the include directories
 target_include_directories(RosToolbox PRIVATE
@@ -94,3 +97,9 @@ if(${Matlab_SIMULINK_FOUND})
     add_executable(main src/main.cpp)
     target_link_libraries(main RosPubSubExample)
 endif()
+
+# ==========================
+# INSTALL THE PLUGIN LIBRARY
+# ==========================
+
+install_blockfactory_plugin(RosToolbox)
