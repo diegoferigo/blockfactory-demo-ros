@@ -84,17 +84,16 @@ bool RosTopicPublisher::configureSizeAndPorts(blockfactory::core::BlockInformati
     }
 
     // Configure the input port
-    blockfactory::core::BlockInformation::PortData input{
-        /*portIndex=*/0,
-        std::vector<int>{blockfactory::core::Signal::DynamicSize},
-        blockfactory::core::DataType::DOUBLE};
+    blockfactory::core::Port::Info input{/*portIndex=*/0,
+                                         std::vector<int>{blockfactory::core::Port::DynamicSize},
+                                         blockfactory::core::Port::DataType::DOUBLE};
 
     // Populate a data structure with the input / output data
-    blockfactory::core::BlockInformation::IOData ioData;
-    ioData.input.push_back(input);
+    blockfactory::core::InputPortsInfo inputPortsInfo;
+    inputPortsInfo.push_back(input);
 
     // Store port data into the BlockInformation
-    if (!blockInfo->setIOPortsData(ioData)) {
+    if (!blockInfo->setPortsInfo(inputPortsInfo, {})) {
         bfError << "Failed to configure input / output ports";
         return false;
     }

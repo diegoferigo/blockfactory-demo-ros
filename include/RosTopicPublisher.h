@@ -26,8 +26,6 @@ private:
     std::unique_ptr<Impl> pImpl;
 
 public:
-    static const std::string ClassName;
-
     RosTopicPublisher();
     ~RosTopicPublisher() override;
 
