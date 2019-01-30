@@ -219,6 +219,9 @@ void RosPubSubExampleModelClass::initialize()
             blockfactory::core::ParameterMetadata(
                 blockfactory::core::ParameterType::STRING, 0.0, 1.0, 1.0, "className"));
 
+        // Store the block name
+        blockInfo->setBlockName("RosPubSubExample/RosTopicPublisher");
+
         // Store the parameters in the CoderBlockInformation object
         blockInfo->storeRTWParameters(params);
 
@@ -381,6 +384,9 @@ void RosPubSubExampleModelClass::initialize()
             "RosTopicSubscriber",
             blockfactory::core::ParameterMetadata(
                 blockfactory::core::ParameterType::STRING, 0.0, 1.0, 1.0, "className"));
+
+        // Store the block name
+        blockInfo->setBlockName("RosPubSubExample/RosTopicSubscriber");
 
         // Store the parameters in the CoderBlockInformation object
         blockInfo->storeRTWParameters(params);
